@@ -1,0 +1,14 @@
+[Unit]
+Description=whats-next
+After=network.target
+
+[Service]
+User=whatsnext
+WorkingDirectory=/opt/whats-next
+Environment=DATA_DIR=/opt/whats-next/data
+EnvironmentFile=/opt/whats-next/.env
+ExecStart=/opt/whats-next/.venv/bin/gunicorn app:app -b 127.0.0.1:8000 -w 2
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
