@@ -1,0 +1,13 @@
+[project]
+name = "whats-next"
+version = "0.1.0"
+description = "Search your Google Maps saved places by keyword, notes, and travel time"
+requires-python = ">=3.12"
+dependencies = [
+    "shapely>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
