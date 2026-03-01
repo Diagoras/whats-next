@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>what's next?</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --accent: #6eb5ff;
+    --accent-dim: #3a7bd5;
+    --tag: #2a2a2a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding: 1rem;
+    padding-bottom: 6rem;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  h1 span { color: var(--accent); }
+
+  /* Search */
+  .search-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .search-row input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .search-row input::placeholder { color: var(--text-dim); }
+  .search-row input:focus { outline: none; border-color: var(--accent-dim); }
+
+  /* Toggles */
+  .toggle-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 0.5rem 0.9rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .chip.active {
+    background: var(--accent-dim);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Nearby controls */
+  .nearby-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+  }
+  .btn {
+    padding: 0.65rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent-dim);
+    color: #fff;
+  }
+  .btn-primary:active { background: var(--accent); }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .minutes-input {
+    width: 4rem;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  .minutes-input:focus { outline: none; border-color: var(--accent-dim); }
+  .minutes-label { color: var(--text-dim); font-size: 0.85rem; }
+
+  /* Filter row */
+  .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+  .filter-row select {
+    flex: 1;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .filter-row select:focus { outline: none; border-color: var(--accent-dim); }
+
+  /* Status */
+  .status {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    min-height: 1.2rem;
+  }
+  .status.error { color: #e57373; }
+
+  /* Results */
+  .results { display: flex; flex-direction: column; gap: 0.75rem; }
+  .place {
+    padding: 0.9rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+  }
+  .place-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  .place-name a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .place-note {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+    font-style: italic;
+  }
+  .place-meta {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .place-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    margin-top: 0.35rem;
+  }
+  .place-tag {
+    padding: 0.15rem 0.5rem;
+    background: var(--tag);
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+
+<h1><span>what's</span> next?</h1>
+
+<div class="search-row">
+  <input id="q" type="search" placeholder="Search places, notes, cuisine..." autocomplete="off">
+</div>
+
+<div class="toggle-row">
+  <div class="chip active" data-mode="search">Search</div>
+  <div class="chip" data-mode="notes">Notes only</div>
+  <div class="chip" data-mode="nearby">Near me</div>
+</div>
+
+<div id="nearby-controls" style="display: none;">
+  <div class="nearby-row">
+    <button id="locate-btn" class="btn btn-primary">Get location</button>
+    <input id="minutes" class="minutes-input" type="number" value="15" min="1" max="60">
+    <span class="minutes-label">min</span>
+  </div>
+  <div class="toggle-row" id="travel-modes">
+    <div class="chip active" data-travel="walk">Walk</div>
+    <div class="chip" data-travel="bike">Bike</div>
+    <div class="chip" data-travel="uber">Uber</div>
+  </div>
+</div>
+
+<div class="filter-row">
+  <select id="list-filter">
+    <option value="">All lists</option>
+  </select>
+</div>
+
+<div class="status" id="status"></div>
+<div class="results" id="results"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+let mode = "search";
+let travelMode = "walk";
+let userLat = null, userLng = null;
+
+// Load lists
+fetch("/api/lists").then(r => r.json()).then(lists => {
+  const sel = $("#list-filter");
+  lists.forEach(([name, count]) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = `${name} (${count})`;
+    sel.appendChild(opt);
+  });
+});
+
+// Mode toggles
+$$("[data-mode]").forEach(el => {
+  el.addEventListener("click", () => {
+    $$("[data-mode]").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+    mode = el.dataset.mode;
+    $("#nearby-controls").style.display = mode === "nearby" ? "block" : "none";
+    doSearch();
+  });
+});
+
+// Travel mode toggles
+$$("[data-travel]").forEach(el => {
+  el.addEventListener("click", () => {
+    $$("[data-travel]").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+    travelMode = el.dataset.travel;
+    if (userLat) doSearch();
+  });
+});
+
+// Search triggers
+$("#q").addEventListener("input", debounce(doSearch, 300));
+$("#list-filter").addEventListener("change", doSearch);
+$("#minutes").addEventListener("change", () => { if (userLat) doSearch(); });
+
+// Geolocation
+$("#locate-btn").addEventListener("click", () => {
+  const btn = $("#locate-btn");
+  btn.disabled = true;
+  btn.textContent = "Locating...";
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      btn.textContent = "Located!";
+      setTimeout(() => { btn.textContent = "Update location"; btn.disabled = false; }, 1500);
+      doSearch();
+    },
+    err => {
+      btn.textContent = "Get location";
+      btn.disabled = false;
+      setStatus("Could not get location. Check permissions.", true);
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+
+function doSearch() {
+  const q = $("#q").value.trim();
+  const list = $("#list-filter").value;
+
+  if (mode === "nearby") {
+    if (!userLat) {
+      setStatus("Tap 'Get location' first");
+      return;
+    }
+    const minutes = $("#minutes").value || 15;
+    let url = `/api/nearby?lat=${userLat}&lng=${userLng}&minutes=${minutes}&mode=${travelMode}`;
+    if (q) url += `&q=${encodeURIComponent(q)}`;
+    if (list) url += `&list=${encodeURIComponent(list)}`;
+    fetchResults(url);
+  } else if (mode === "notes") {
+    if (!q) { clearResults(); return; }
+    let url = `/api/search-notes?q=${encodeURIComponent(q)}`;
+    fetchResults(url);
+  } else {
+    if (!q && !list) { clearResults(); return; }
+    let url = `/api/search?q=${encodeURIComponent(q || "")}`;
+    if (list) url += `&list=${encodeURIComponent(list)}`;
+    fetchResults(url);
+  }
+}
+
+function fetchResults(url) {
+  setStatus("Searching...");
+  fetch(url)
+    .then(r => {
+      if (!r.ok) return r.json().then(d => { throw new Error(d.error || "Request failed"); });
+      return r.json();
+    })
+    .then(places => {
+      if (places.length === 0) {
+        setStatus("No places found. Try broader terms or more time.");
+        clearResults();
+      } else {
+        setStatus(`${places.length} place${places.length > 1 ? "s" : ""} found`);
+        renderResults(places);
+      }
+    })
+    .catch(err => setStatus(err.message, true));
+}
+
+function renderResults(places) {
+  const el = $("#results");
+  el.innerHTML = places.map(p => {
+    const mapsUrl = p.google_maps_url || `https://www.google.com/maps/search/${encodeURIComponent(p.name)}`;
+    let html = `<div class="place">`;
+    html += `<div class="place-name"><a href="${mapsUrl}" target="_blank" rel="noopener">${esc(p.name)}</a></div>`;
+    if (p.note) html += `<div class="place-note">${esc(p.note)}</div>`;
+    if (p.address) html += `<div class="place-meta">${esc(p.address)}</div>`;
+    html += `<div class="place-tags">`;
+    p.source_list.split(", ").forEach(s => {
+      html += `<span class="place-tag">${esc(s)}</span>`;
+    });
+    html += `</div></div>`;
+    return html;
+  }).join("");
+}
+
+function clearResults() { $("#results").innerHTML = ""; }
+function setStatus(msg, error) {
+  const el = $("#status");
+  el.textContent = msg;
+  el.className = error ? "status error" : "status";
+}
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+</script>
+</body>
+</html>

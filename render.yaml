@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: whats-next
+    runtime: python
+    plan: free
+    buildCommand: pip install uv && uv sync && bash scripts/load_data.sh && uv run python main.py ingest
+    startCommand: uv run gunicorn app:app
+    envVars:
+      - key: TAKEOUT_URL
+        sync: false
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
