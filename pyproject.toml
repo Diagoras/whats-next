@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Search your Google Maps saved places by keyword, notes, and travel time"
 requires-python = ">=3.12"
 dependencies = [
+    "flask>=3.1.3",
+    "gunicorn>=25.1.0",
     "shapely>=2.0",
 ]
 
