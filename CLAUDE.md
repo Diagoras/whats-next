@@ -15,6 +15,8 @@ Dependencies and data are loaded automatically via the SessionStart hook.
 ### Optional environment variables:
 - `GOOGLE_MAPS_API_KEY` — Google Maps API key (enables Places API fallback for
   geocoding places Nominatim can't find, ~$4 one-time cost for ~134 places)
+- `TRAVELTIME_APP_ID` + `TRAVELTIME_API_KEY` — enables real public transit
+  isochrones via TravelTime API (free tier at https://traveltime.com/)
 
 ### How to get your data:
 1. Go to https://takeout.google.com
@@ -70,12 +72,11 @@ uv run python main.py lists
 - **"10-minute Uber from downtown"** -> `nearby "downtown Seattle" --minutes 10 --mode uber`
 
 ## Travel Modes
-- `walk` — Walking (default)
-- `bike` — Bicycling
-- `drive` / `uber` / `transit` — Driving (proxy for Uber; ORS has no transit routing)
+- `walk` — Walking (default, via OpenRouteService)
+- `transit` — Real public transit routing (via TravelTime API)
+- `uber` — Driving approximation (via OpenRouteService)
 
 ## Notes
 - Always include the Google Maps URL in results so the user can open directions.
 - If no results found, suggest broadening the search or increasing travel time.
 - This searches the user's personal saved places only, not all of Google Maps.
-- The `--mode uber`/`transit` use driving-car as approximation. Mention this if relevant.
