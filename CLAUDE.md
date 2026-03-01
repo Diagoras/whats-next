@@ -6,14 +6,29 @@ not have a car, and primarily walks, bikes, takes transit, or uses Uber.
 
 ## Setup
 
-Dependencies are installed automatically via the SessionStart hook.
-The `OPENROUTESERVICE_API_KEY` environment variable must be set in the
-Claude Code environment configuration for proximity queries.
+Dependencies and data are loaded automatically via the SessionStart hook.
+
+### Required environment variables (set in Claude Code web environment config):
+- `OPENROUTESERVICE_API_KEY` — free key from https://openrouteservice.org/dev/#/signup
+- `TAKEOUT_URL` — direct download URL for your Google Takeout .tgz/.zip
+  (e.g., a private GitHub Gist raw URL or any file host)
+
+### How to get your data:
+1. Go to https://takeout.google.com
+2. Click "Deselect all", then check only **"Saved"** (NOT "Maps")
+3. Export and download the .tgz file
+4. Upload it somewhere with a direct download link (private GitHub Gist
+   works well — create a gist, upload the .tgz, use the raw URL)
+5. Set that URL as `TAKEOUT_URL` in your environment
+
+### What happens on session start:
+1. `uv sync` installs dependencies
+2. `scripts/load_data.sh` downloads and extracts your Takeout data (if not already present)
+3. `main.py ingest` parses the data and geocodes places (~16 min on first run, cached after)
 
 ## Data
 
-Takeout export files go in `data/`. Run `uv run python main.py ingest`
-to parse them and build the cache (also runs automatically on session start).
+Takeout export files go in `data/`. To manually re-ingest: `uv run python main.py ingest`
 
 ## Commands
 
