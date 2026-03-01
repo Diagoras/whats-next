@@ -12,6 +12,10 @@ Dependencies and data are loaded automatically via the SessionStart hook.
 - `OPENROUTESERVICE_API_KEY` — free key from https://openrouteservice.org/dev/#/signup
 - `TAKEOUT_URL` — Google Drive share link or direct download URL for your Takeout .tgz
 
+### Optional environment variables:
+- `GOOGLE_MAPS_API_KEY` — Google Maps API key (enables Places API fallback for
+  geocoding places Nominatim can't find, ~$4 one-time cost for ~134 places)
+
 ### How to get your data:
 1. Go to https://takeout.google.com
 2. Click "Deselect all", then check only **"Saved"** (NOT "Maps")
