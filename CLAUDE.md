@@ -10,16 +10,15 @@ Dependencies and data are loaded automatically via the SessionStart hook.
 
 ### Required environment variables (set in Claude Code web environment config):
 - `OPENROUTESERVICE_API_KEY` — free key from https://openrouteservice.org/dev/#/signup
-- `TAKEOUT_URL` — direct download URL for your Google Takeout .tgz/.zip
-  (e.g., a private GitHub Gist raw URL or any file host)
+- `TAKEOUT_URL` — Google Drive share link or direct download URL for your Takeout .tgz
 
 ### How to get your data:
 1. Go to https://takeout.google.com
 2. Click "Deselect all", then check only **"Saved"** (NOT "Maps")
 3. Export and download the .tgz file
-4. Upload it somewhere with a direct download link (private GitHub Gist
-   works well — create a gist, upload the .tgz, use the raw URL)
-5. Set that URL as `TAKEOUT_URL` in your environment
+4. Upload the .tgz to Google Drive
+5. Right-click → Share → "Anyone with the link" → Copy link
+6. Set that link as `TAKEOUT_URL` in your environment
 
 ### What happens on session start:
 1. `uv sync` installs dependencies
