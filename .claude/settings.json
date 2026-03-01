@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv sync --quiet 2>/dev/null && uv run python main.py ingest 2>/dev/null || true"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv sync --quiet 2>/dev/null && bash scripts/load_data.sh 2>/dev/null && uv run python main.py ingest 2>/dev/null || true"
           }
         ]
       }
