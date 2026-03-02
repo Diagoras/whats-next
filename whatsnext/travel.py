@@ -1,18 +1,17 @@
 import json
 import os
+import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
 
-from shapely.geometry import shape, Point, Polygon, MultiPolygon
+from shapely.geometry import shape, Point
 
 from whatsnext.models import Place
 
 ORS_API_KEY_ENV = "OPENROUTESERVICE_API_KEY"
 ORS_ISOCHRONE_URL = "https://api.openrouteservice.org/v2/isochrones/{profile}"
 
-TRAVELTIME_APP_ID_ENV = "TRAVELTIME_APP_ID"
-TRAVELTIME_API_KEY_ENV = "TRAVELTIME_API_KEY"
-TRAVELTIME_URL = "https://api.traveltimeapp.com/v4/time-map"
+GEOAPIFY_API_KEY_ENV = "GEOAPIFY_API_KEY"
+GEOAPIFY_ISOLINE_URL = "https://api.geoapify.com/v1/isoline"
 
 ORS_MODES = {
     "walk": "foot-walking",
@@ -36,63 +35,44 @@ def get_isochrone_polygon(
     minutes: int,
     mode: str = "walk",
 ):
-    """Get reachable area polygon. Uses TravelTime for transit, ORS for others."""
+    """Get reachable area polygon. Uses Geoapify for transit, ORS for others."""
     if mode.lower() in TRANSIT_MODES:
-        return _traveltime_isochrone(lat, lng, minutes)
+        return _geoapify_isochrone(lat, lng, minutes)
     return _ors_isochrone(lat, lng, minutes, mode)
 
 
-def _traveltime_isochrone(lat: float, lng: float, minutes: int):
-    """Get transit isochrone from TravelTime API."""
-    app_id = os.environ.get(TRAVELTIME_APP_ID_ENV)
-    api_key = os.environ.get(TRAVELTIME_API_KEY_ENV)
-    if not app_id or not api_key:
+def _geoapify_isochrone(lat: float, lng: float, minutes: int):
+    """Get transit isochrone from Geoapify Isoline API."""
+    api_key = os.environ.get(GEOAPIFY_API_KEY_ENV)
+    if not api_key:
         raise ValueError(
-            f"Set {TRAVELTIME_APP_ID_ENV} and {TRAVELTIME_API_KEY_ENV} for transit mode. "
-            "Get free keys at https://traveltime.com/"
+            f"Set {GEOAPIFY_API_KEY_ENV} for transit mode. "
+            "Get a free key at https://myprojects.geoapify.com/"
         )
 
-    body = json.dumps({
-        "departure_searches": [{
-            "id": "nearby",
-            "coords": {"lat": lat, "lng": lng},
-            "departure_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "travel_time": minutes * 60,
-            "transportation": {"type": "public_transport"},
-        }],
-    }).encode()
+    params = urllib.parse.urlencode({
+        "lat": lat,
+        "lon": lng,
+        "type": "time",
+        "mode": "transit",
+        "range": minutes * 60,
+        "apiKey": api_key,
+    })
+    url = f"{GEOAPIFY_ISOLINE_URL}?{params}"
 
-    req = urllib.request.Request(
-        TRAVELTIME_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-Application-Id": app_id,
-            "X-Api-Key": api_key,
-        },
-    )
-
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()
-        raise RuntimeError(f"TravelTime API error ({e.code}): {err_body}")
+        raise RuntimeError(f"Geoapify API error ({e.code}): {err_body}")
 
-    results = data.get("results", [])
-    if not results or not results[0].get("shapes"):
-        raise RuntimeError("TravelTime returned no isochrone shapes")
+    features = data.get("features", [])
+    if not features:
+        raise RuntimeError("Geoapify returned no isochrone features")
 
-    polygons = []
-    for s in results[0]["shapes"]:
-        shell = [(p["lng"], p["lat"]) for p in s["shell"]]
-        holes = [[(p["lng"], p["lat"]) for p in h] for h in s.get("holes", [])]
-        polygons.append(Polygon(shell, holes))
-
-    if len(polygons) == 1:
-        return polygons[0]
-    return MultiPolygon(polygons)
+    return shape(features[0]["geometry"])
 
 
 def _ors_isochrone(lat: float, lng: float, minutes: int, mode: str):
