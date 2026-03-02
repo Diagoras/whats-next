@@ -15,8 +15,8 @@ Dependencies and data are loaded automatically via the SessionStart hook.
 ### Optional environment variables:
 - `GOOGLE_MAPS_API_KEY` — Google Maps API key (enables Places API fallback for
   geocoding places Nominatim can't find, ~$4 one-time cost for ~134 places)
-- `TRAVELTIME_APP_ID` + `TRAVELTIME_API_KEY` — enables real public transit
-  isochrones via TravelTime API (free tier at https://traveltime.com/)
+- `GEOAPIFY_API_KEY` — enables real public transit isochrones via Geoapify
+  (free tier: 3,000 req/day at https://myprojects.geoapify.com/)
 
 ### How to get your data:
 1. Go to https://takeout.google.com
