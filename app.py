@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, jsonify
 from whatsnext.ingest import load_cache
 from whatsnext.search import search_places, search_notes, list_all_sources
 from whatsnext.travel import filter_by_travel_time, filter_and_search
+from whatsnext.geocode import parse_location_input
 
 app = Flask(__name__)
 
@@ -33,12 +34,20 @@ def api_lists():
     return jsonify(sorted(sources.items(), key=lambda x: -x[1]))
 
 
+def _filter_open(places):
+    """Filter to only currently open places if open_now param is set."""
+    if request.args.get("open_now") == "1":
+        return [p for p in places if p.is_open_now() is True]
+    return places
+
+
 @app.route("/api/search")
 def api_search():
     places = get_places()
     q = request.args.get("q", "")
     source = request.args.get("list")
     results = search_places(places, q, source_list=source)
+    results = _filter_open(results)
     return jsonify([p.to_dict() for p in results[:50]])
 
 
@@ -47,17 +56,27 @@ def api_search_notes():
     places = get_places()
     q = request.args.get("q", "")
     results = search_notes(places, q)
+    results = _filter_open(results)
     return jsonify([p.to_dict() for p in results[:50]])
 
 
 @app.route("/api/nearby")
 def api_nearby():
     places = get_places()
-    try:
-        lat = float(request.args["lat"])
-        lng = float(request.args["lng"])
-    except (KeyError, ValueError):
-        return jsonify({"error": "lat and lng are required"}), 400
+
+    # Accept lat/lng or an address string
+    address = request.args.get("address")
+    if address:
+        try:
+            lat, lng = parse_location_input(address)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        try:
+            lat = float(request.args["lat"])
+            lng = float(request.args["lng"])
+        except (KeyError, ValueError):
+            return jsonify({"error": "lat/lng or address required"}), 400
 
     minutes = int(request.args.get("minutes", 15))
     mode = request.args.get("mode", "walk")
@@ -76,4 +95,5 @@ def api_nearby():
     except (ValueError, RuntimeError) as e:
         return jsonify({"error": str(e)}), 400
 
+    results = _filter_open(results)
     return jsonify([p.to_dict() for p in results[:50]])

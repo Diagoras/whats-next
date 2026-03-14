@@ -111,6 +111,17 @@
   }
   .minutes-input:focus { outline: none; border-color: var(--accent-dim); }
   .minutes-label { color: var(--text-dim); font-size: 0.85rem; }
+  .address-input {
+    flex: 1;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+  .address-input::placeholder { color: var(--text-dim); }
+  .address-input:focus { outline: none; border-color: var(--accent-dim); }
 
   /* Filter row */
   .filter-row {
@@ -179,6 +190,13 @@
     font-size: 0.75rem;
     color: var(--text-dim);
   }
+  .place-hours {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+  .place-hours.open { color: #81c784; }
+  .place-hours.closed { color: #e57373; }
+  .place-hours.unknown { color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -198,6 +216,10 @@
 <div id="nearby-controls" style="display: none;">
   <div class="nearby-row">
     <button id="locate-btn" class="btn btn-primary">Get location</button>
+    <span class="minutes-label">or</span>
+    <input id="address" type="text" placeholder="Type an address..." class="address-input">
+  </div>
+  <div class="nearby-row">
     <input id="minutes" class="minutes-input" type="number" value="15" min="1" max="60">
     <span class="minutes-label">min</span>
   </div>
@@ -212,6 +234,7 @@
   <select id="list-filter">
     <option value="">All lists</option>
   </select>
+  <div class="chip" id="open-now-chip">Open now</div>
 </div>
 
 <div class="status" id="status"></div>
@@ -224,6 +247,7 @@ const $$ = s => document.querySelectorAll(s);
 let mode = "search";
 let travelMode = "walk";
 let userLat = null, userLng = null;
+let openNow = false;
 
 // Load lists
 fetch("/api/lists").then(r => r.json()).then(lists => {
@@ -257,10 +281,24 @@ $$("[data-travel]").forEach(el => {
   });
 });
 
+// Open now toggle
+$("#open-now-chip").addEventListener("click", () => {
+  openNow = !openNow;
+  $("#open-now-chip").classList.toggle("active", openNow);
+  doSearch();
+});
+
 // Search triggers
 $("#q").addEventListener("input", debounce(doSearch, 300));
 $("#list-filter").addEventListener("change", doSearch);
-$("#minutes").addEventListener("change", () => { if (userLat) doSearch(); });
+$("#minutes").addEventListener("change", () => { if (userLat || $("#address").value) doSearch(); });
+$("#address").addEventListener("input", debounce(() => {
+  if ($("#address").value.trim()) {
+    userLat = null;
+    userLng = null;
+    doSearch();
+  }
+}, 500));
 
 // Geolocation
 $("#locate-btn").addEventListener("click", () => {
@@ -271,6 +309,7 @@ $("#locate-btn").addEventListener("click", () => {
     pos => {
       userLat = pos.coords.latitude;
       userLng = pos.coords.longitude;
+      if ($("#address")) $("#address").value = "";
       btn.textContent = "Located!";
       setTimeout(() => { btn.textContent = "Update location"; btn.disabled = false; }, 1500);
       doSearch();
@@ -287,25 +326,34 @@ $("#locate-btn").addEventListener("click", () => {
 function doSearch() {
   const q = $("#q").value.trim();
   const list = $("#list-filter").value;
+  const openParam = openNow ? "&open_now=1" : "";
+  const addr = $("#address") ? $("#address").value.trim() : "";
 
   if (mode === "nearby") {
-    if (!userLat) {
-      setStatus("Tap 'Get location' first");
+    if (!userLat && !addr) {
+      setStatus("Tap 'Get location' or type an address");
       return;
     }
     const minutes = $("#minutes").value || 15;
-    let url = `/api/nearby?lat=${userLat}&lng=${userLng}&minutes=${minutes}&mode=${travelMode}`;
+    let url;
+    if (addr && !userLat) {
+      url = `/api/nearby?address=${encodeURIComponent(addr)}&minutes=${minutes}&mode=${travelMode}`;
+    } else {
+      url = `/api/nearby?lat=${userLat}&lng=${userLng}&minutes=${minutes}&mode=${travelMode}`;
+    }
     if (q) url += `&q=${encodeURIComponent(q)}`;
     if (list) url += `&list=${encodeURIComponent(list)}`;
+    url += openParam;
     fetchResults(url);
   } else if (mode === "notes") {
     if (!q) { clearResults(); return; }
-    let url = `/api/search-notes?q=${encodeURIComponent(q)}`;
+    let url = `/api/search-notes?q=${encodeURIComponent(q)}${openParam}`;
     fetchResults(url);
   } else {
     if (!q && !list) { clearResults(); return; }
     let url = `/api/search?q=${encodeURIComponent(q || "")}`;
     if (list) url += `&list=${encodeURIComponent(list)}`;
+    url += openParam;
     fetchResults(url);
   }
 }
@@ -331,12 +379,24 @@ function fetchResults(url) {
 
 function renderResults(places) {
   const el = $("#results");
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const today = (new Date().getDay()); // 0=Sunday
+
   el.innerHTML = places.map(p => {
     const mapsUrl = p.google_maps_url || `https://www.google.com/maps/search/${encodeURIComponent(p.name)}`;
     let html = `<div class="place">`;
     html += `<div class="place-name"><a href="${mapsUrl}" target="_blank" rel="noopener">${esc(p.name)}</a></div>`;
     if (p.note) html += `<div class="place-note">${esc(p.note)}</div>`;
     if (p.address) html += `<div class="place-meta">${esc(p.address)}</div>`;
+    // Hours
+    if (p.weekday_text && p.weekday_text.length > 0) {
+      const todayText = p.weekday_text.find(t => t.startsWith(dayNames[today].substring(0, 3)));
+      const isOpen = checkOpen(p.opening_hours, today);
+      const cls = isOpen === null ? "unknown" : isOpen ? "open" : "closed";
+      const label = isOpen === null ? "" : isOpen ? "Open" : "Closed";
+      let hoursStr = todayText ? todayText.split(": ").slice(1).join(": ") : "";
+      html += `<div class="place-hours ${cls}">${label}${hoursStr ? " \u00b7 " + esc(hoursStr) : ""}</div>`;
+    }
     html += `<div class="place-tags">`;
     p.source_list.split(", ").forEach(s => {
       html += `<span class="place-tag">${esc(s)}</span>`;
@@ -344,6 +404,21 @@ function renderResults(places) {
     html += `</div></div>`;
     return html;
   }).join("");
+}
+
+function checkOpen(periods, today) {
+  if (!periods || periods.length === 0) return null;
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  for (const p of periods) {
+    if (p.open && p.open.day === today) {
+      const openMins = p.open.hour * 60 + p.open.minute;
+      let closeMins = 24 * 60;
+      if (p.close) closeMins = p.close.hour * 60 + p.close.minute || 24 * 60;
+      if (nowMins >= openMins && nowMins < closeMins) return true;
+    }
+  }
+  return false;
 }
 
 function clearResults() { $("#results").innerHTML = ""; }

@@ -6,6 +6,7 @@ import sys
 
 from whatsnext.models import Place
 from whatsnext.geocode import geocode_place, load_geocode_cache, save_geocode_cache
+from whatsnext.hours import fetch_all_hours
 
 CACHE_FILE = "places_cache.json"
 
@@ -49,6 +50,14 @@ def ingest_all(data_dir: str = "data") -> list[Place]:
     skipped = len(places) - len(geocoded)
     if skipped:
         print(f"Skipped {skipped} places that could not be geocoded.", file=sys.stderr)
+
+    # Fetch opening hours
+    hours_cache = fetch_all_hours(geocoded, data_dir)
+    for p in geocoded:
+        hours = hours_cache.get(p.name)
+        if hours:
+            p.opening_hours = hours.get("periods", [])
+            p.weekday_text = hours.get("weekday_text", [])
 
     save_cache(geocoded, data_dir)
     return geocoded
